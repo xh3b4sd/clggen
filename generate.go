@@ -25,6 +25,9 @@ func (c *clggen) InitGenerateCmd() *cobra.Command {
 	return newCmd
 }
 
+// TmplCtx represents the context provided to the template parsing. Using the
+// template context the CLG name and package name is available inside the
+// templates.
 type TmplCtx struct {
 	CLGName     string
 	PackageName string
