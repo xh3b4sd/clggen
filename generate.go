@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
-	"compress/gzip"
+	"fmt"
 	"go/format"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
-	"github.com/fatih/camelcase"
 	"github.com/spf13/cobra"
 )
 
@@ -25,66 +26,77 @@ func (c *clggen) InitGenerateCmd() *cobra.Command {
 	return newCmd
 }
 
-type tmplCtx struct {
-	CLGName string
-	Package string
+type TmplCtx struct {
+	CLGName     string
+	PackageName string
 }
 
-// TODO
-//
-//     collect all packages implementing func (c *clg) calculate
-//     create template context for each package: directory name (foo-bar), package name (foobar), clg name (foo-bar),
-//     generate source code by writing template files into identified clg package
-
 func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
-	newTmplCtx := tmplCtx{
-		CLGName: map[string][]byte{},
-		Package: c.Flags.Package,
-	}
-
 	err := filepath.Walk(c.Flags.InputPath, func(path string, info os.FileInfo, err error) error {
-		if !c.shouldBeLoaded(path, info) {
+		if info.IsDir() {
 			return nil
 		}
 
-		raw, err := ioutil.ReadFile(path)
-		if err != nil {
-			return maskAny(err)
+		fmt.Printf("path: %#v\n", path)
+
+		var isCLGPackage bool
+		{
+			raw, err := ioutil.ReadFile(path)
+			if err != nil {
+				return maskAny(err)
+			}
+			scanner := bufio.NewScanner(bytes.NewBuffer(raw))
+			for scanner.Scan() {
+				if strings.Contains(scanner.Text(), c.Flags.CLGExpression) {
+					isCLGPackage = true
+					break
+				}
+			}
+			err = scanner.Err()
+			if err != nil {
+				return maskAny(err)
+			}
 		}
-		var b bytes.Buffer
-		w := gzip.NewWriter(&b)
-		_, err = w.Write(raw)
-		w.Close()
-		if err != nil {
-			return maskAny(err)
+
+		fmt.Printf("isCLGPackage: %#v\n", isCLGPackage)
+		if isCLGPackage {
+			dirName := filepath.Base(filepath.Dir(path))
+			newTmplCtx := TmplCtx{
+				CLGName:     dirName,
+				PackageName: strings.Replace(dirName, "-", "", -1),
+			}
+
+			for fileName, sourceCode := range Templates {
+				// tmpl
+				filePath := filepath.Join(filepath.Dir(path), fileName)
+				tmpl, err := template.New(filePath).Parse(sourceCode)
+				if err != nil {
+					return maskAny(err)
+				}
+				var b bytes.Buffer
+				err = tmpl.Execute(&b, newTmplCtx)
+				if err != nil {
+					return maskAny(err)
+				}
+				// format
+				fmt.Printf("\n")
+				fmt.Printf("newTmplCtx: %#v\n", newTmplCtx)
+				fmt.Printf("\n")
+				raw, err := format.Source(b.Bytes())
+				if err != nil {
+					return maskAny(err)
+				}
+				// write
+				err = ioutil.WriteFile(filePath, raw, os.FileMode(0644))
+				if err != nil {
+					return maskAny(err)
+				}
+			}
 		}
-		newTmplCtx.AssetMap[path] = b.Bytes()
 
 		return nil
 	})
 
-	if err != nil {
-		log.Fatalf("%#v\n", maskAny(err))
-	}
-
-	// tmpl
-	tmpl, err := template.New(c.Flags.FileNamePrefix).Parse(Template)
-	if err != nil {
-		log.Fatalf("%#v\n", maskAny(err))
-	}
-	var b bytes.Buffer
-	err = tmpl.Execute(&b, newTmplCtx)
-	if err != nil {
-		log.Fatalf("%#v\n", maskAny(err))
-	}
-
-	// format
-	raw, err := format.Source(b.Bytes())
-	if err != nil {
-		log.Fatalf("%#v\n", maskAny(err))
-	}
-
-	err = ioutil.WriteFile(c.Flags.FileNamePrefix, raw, os.FileMode(0644))
 	if err != nil {
 		log.Fatalf("%#v\n", maskAny(err))
 	}
