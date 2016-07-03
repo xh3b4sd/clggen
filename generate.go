@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"go/format"
 	"io/ioutil"
 	"log"
@@ -37,8 +36,6 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 			return nil
 		}
 
-		fmt.Printf("path: %#v\n", path)
-
 		var isCLGPackage bool
 		{
 			raw, err := ioutil.ReadFile(path)
@@ -58,7 +55,6 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		fmt.Printf("isCLGPackage: %#v\n", isCLGPackage)
 		if isCLGPackage {
 			dirName := filepath.Base(filepath.Dir(path))
 			newTmplCtx := TmplCtx{
@@ -79,9 +75,6 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 					return maskAny(err)
 				}
 				// format
-				fmt.Printf("\n")
-				fmt.Printf("newTmplCtx: %#v\n", newTmplCtx)
-				fmt.Printf("\n")
 				raw, err := format.Source(b.Bytes())
 				if err != nil {
 					return maskAny(err)
