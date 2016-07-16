@@ -49,7 +49,7 @@ func NewCLGGen(config Config) (spec.CLGGen, error) {
 		Long:  "Asset management and code generation. For more information see https://github.com/xh3b4sd/clggen.",
 
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+			cmd.HelpFunc()(cmd, nil)
 		},
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
