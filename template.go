@@ -35,6 +35,9 @@ var generatedGo = `package {{.PackageName}}
 		// Dependencies.
 		Log     spec.Log
 		Storage spec.Storage
+
+		// Settings.
+		InputChannel chan spec.NetworkPayload
 	}
 
 	// DefaultConfig provides a default configuration to create a new CLG object by
@@ -49,6 +52,9 @@ var generatedGo = `package {{.PackageName}}
 			// Dependencies.
 			Log:     log.NewLog(log.DefaultConfig()),
 			Storage: newStorage,
+
+			// Settings.
+			InputChannel: make(chan spec.NetworkPayload, 1000),
 		}
 
 		return newConfig
@@ -62,11 +68,17 @@ var generatedGo = `package {{.PackageName}}
 			Type:   ObjectType,
 		}
 
+		// Dependencies.
 		if newCLG.Log == nil {
 			return nil, maskAnyf(invalidConfigError, "logger must not be empty")
 		}
 		if newCLG.Storage == nil {
 			return nil, maskAnyf(invalidConfigError, "storage must not be empty")
+		}
+
+		// Settings.
+		if newCLG.InputChannel == nil {
+			return nil, maskAnyf(invalidConfigError, "input channel must not be empty")
 		}
 
 		newCLG.Log.Register(newCLG.GetType())
@@ -91,29 +103,39 @@ var generatedGo = `package {{.PackageName}}
 		Type spec.ObjectType
 	}
 
-	func (c *clg) Calculate(inputs []reflect.Value) ([]reflect.Value, error) {
-		outputs, err := filterError(reflect.ValueOf(c.calculate).Call(inputs))
+	func (c *clg) Calculate(payload spec.NetworkPayload) (spec.NetworkPayload, error) {
+		outputs, err := filterError(reflect.ValueOf(c.calculate).Call(payload.Args))
 		if err != nil {
-			return nil, maskAny(err)
+			return spec.NetworkPayload{}, maskAny(err)
 		}
 
-		return outputs, nil
+		calculatedPayload := spec.NetworkPayload{
+			Args:        outputs,
+			Destination: "", // This has to be decided by Network.Forward.
+			Sources:     []spec.ObjectID{payload.Destination},
+		}
+
+		return calculatedPayload, nil
 	}
 
 	func (c *clg) GetName() string {
 		return "{{.CLGName}}"
 	}
 
-	func (c *clg) Inputs() []reflect.Type {
+	func (c *clg) GetInputChannel() chan spec.NetworkPayload {
+		return c.InputChannel
+	}
+
+	func (c *clg) GetInputTypes() []reflect.Type {
 		t := reflect.TypeOf(c.calculate)
 
-		var clgInputs []reflect.Type
+		var inputType []reflect.Type
 
 		for i := 0; i < t.NumIn(); i++ {
-			clgInputs = append(clgInputs, t.In(i))
+			inputType = append(inputType, t.In(i))
 		}
 
-		return clgInputs
+		return inputType
 	}
 
 	func (c *clg) SetLog(log spec.Log) {
