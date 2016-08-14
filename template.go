@@ -162,7 +162,7 @@ var generatedCommonGo = `package {{.PackageName}}
 		"reflect"
 	)
 
-	// filterError expects the given list of relfect values to be the output of a
+	// filterError expects the given list of reflect values to be the output of a
 	// CLG execution. In case a CLG returns an error, the error must be the last
 	// element of the output, otherwise filterError will throw an error, because of
 	// the invalid CLG interface. All elements of values, except the error, if any,
