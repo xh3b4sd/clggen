@@ -18,6 +18,7 @@ var generatedGo = `package {{.PackageName}}
 	import (
 		"reflect"
 
+		"github.com/xh3b4sd/anna/api"
 		"github.com/xh3b4sd/anna/factory/id"
 		"github.com/xh3b4sd/anna/log"
 		"github.com/xh3b4sd/anna/spec"
@@ -104,18 +105,21 @@ var generatedGo = `package {{.PackageName}}
 	}
 
 	func (c *clg) Calculate(payload spec.NetworkPayload) (spec.NetworkPayload, error) {
-		outputs, err := filterError(reflect.ValueOf(c.calculate).Call(payload.Args))
+		outputs, err := filterError(reflect.ValueOf(c.calculate).Call(payload.GetArgs()))
 		if err != nil {
-			return spec.NetworkPayload{}, maskAny(err)
+			return nil, maskAny(err)
 		}
 
-		calculatedPayload := spec.NetworkPayload{
-			Args:        outputs,
-			Destination: "", // This has to be decided by Network.Forward.
-			Sources:     []spec.ObjectID{payload.Destination},
+		newNetworkPayloadConfig := api.DefaultNetworkPayloadConfig()
+		newNetworkPayloadConfig.Args = outputs
+		newNetworkPayloadConfig.Destination = "must be set by spec.Network.Forward"
+		newNetworkPayloadConfig.Sources = []spec.ObjectID{payload.GetDestination()}
+		newNetworkPayload, err := api.NewNetworkPayload(newNetworkPayloadConfig)
+		if err != nil {
+			return nil, maskAny(err)
 		}
 
-		return calculatedPayload, nil
+		return newNetworkPayload, nil
 	}
 
 	func (c *clg) GetName() string {
@@ -158,7 +162,7 @@ var generatedCommonGo = `package {{.PackageName}}
 		"reflect"
 	)
 
-	// filterError expects the given list of relfect values to be the output of a
+	// filterError expects the given list of reflect values to be the output of a
 	// CLG execution. In case a CLG returns an error, the error must be the last
 	// element of the output, otherwise filterError will throw an error, because of
 	// the invalid CLG interface. All elements of values, except the error, if any,
