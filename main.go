@@ -53,18 +53,22 @@ func NewCLGGen(config Config) (spec.CLGGen, error) {
 		},
 
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if newCLGGen.Flags.CLGExpression == "" {
-				log.Fatalf("%#v\n", maskAnyf(invalidConfigError, "clg expression must not be empty"))
+			if newCLGGen.Flags.CLGExp == "" {
+				log.Fatalf("%#v\n", maskAnyf(invalidConfigError, "--clg-exp must not be empty"))
 			}
-			if newCLGGen.Flags.InputPath == "" {
-				log.Fatalf("%#v\n", maskAnyf(invalidConfigError, "input path must not be empty"))
+			if newCLGGen.Flags.CLGDir == "" {
+				log.Fatalf("%#v\n", maskAnyf(invalidConfigError, "--clg-dir must not be empty"))
+			}
+			if newCLGGen.Flags.TemplateDir == "" {
+				log.Fatalf("%#v\n", maskAnyf(invalidConfigError, "--template-dir must not be empty"))
 			}
 		},
 	}
 
 	// flags
-	newCLGGen.Cmd.PersistentFlags().StringVarP(&newCLGGen.Flags.CLGExpression, "clg-expression", "c", "func (c *clg) calculate", "regular expression identifying CLG packages")
-	newCLGGen.Cmd.PersistentFlags().StringVarP(&newCLGGen.Flags.InputPath, "input-path", "i", ".", "input path to load CLGs from")
+	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.CLGExp, "clg-exp", "func (c *clg) calculate", "regular expression identifying CLG packages")
+	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.CLGDir, "clg-dir", "clg", "path of the CLG directory")
+	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.TemplateDir, "template-dir", "template", "path of the template directory")
 
 	return newCLGGen, nil
 }
