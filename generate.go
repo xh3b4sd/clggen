@@ -34,7 +34,12 @@ type TmplCtx struct {
 }
 
 func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
-	err := filepath.Walk(c.Flags.InputPath, func(path string, info os.FileInfo, err error) error {
+	newTemplates, err := loadTemplates(c.Flags.TemplateDir)
+	if err != nil {
+		log.Fatalf("%#v\n", maskAny(err))
+	}
+
+	err = filepath.Walk(c.Flags.CLGDir, func(path string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
 		}
@@ -47,7 +52,7 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 			}
 			scanner := bufio.NewScanner(bytes.NewBuffer(raw))
 			for scanner.Scan() {
-				if strings.Contains(scanner.Text(), c.Flags.CLGExpression) {
+				if strings.Contains(scanner.Text(), c.Flags.CLGExp) {
 					isCLGPackage = true
 					break
 				}
@@ -65,7 +70,7 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 				PackageName: strings.Replace(dirName, "-", "", -1),
 			}
 
-			for fileName, sourceCode := range Templates {
+			for fileName, sourceCode := range newTemplates {
 				// tmpl
 				filePath := filepath.Join(filepath.Dir(path), fileName)
 				tmpl, err := template.New(filePath).Parse(sourceCode)
