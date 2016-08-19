@@ -29,8 +29,9 @@ func (c *clggen) InitGenerateCmd() *cobra.Command {
 // template context the CLG name and package name is available inside the
 // templates.
 type TmplCtx struct {
-	CLGName     string
-	PackageName string
+	CLGName          string
+	IsErrorInterface bool
+	PackageName      string
 }
 
 func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
@@ -45,6 +46,7 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 		}
 
 		var isCLGPackage bool
+		var isErrorInterface bool
 		{
 			raw, err := ioutil.ReadFile(path)
 			if err != nil {
@@ -52,8 +54,13 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 			}
 			scanner := bufio.NewScanner(bytes.NewBuffer(raw))
 			for scanner.Scan() {
-				if strings.Contains(scanner.Text(), c.Flags.CLGExp) {
+				if strings.HasPrefix(scanner.Text(), c.Flags.CLGExp) {
 					isCLGPackage = true
+
+					if strings.HasSuffix(scanner.Text(), "error {") || strings.HasSuffix(scanner.Text(), ", error) {") {
+						isErrorInterface = true
+					}
+
 					break
 				}
 			}
@@ -66,8 +73,9 @@ func (c *clggen) ExecGenerateCmd(cmd *cobra.Command, args []string) {
 		if isCLGPackage {
 			dirName := filepath.Base(filepath.Dir(path))
 			newTmplCtx := TmplCtx{
-				CLGName:     dirName,
-				PackageName: strings.Replace(dirName, "-", "", -1),
+				CLGName:          dirName,
+				IsErrorInterface: isErrorInterface,
+				PackageName:      strings.Replace(dirName, "-", "", -1),
 			}
 
 			for fileName, sourceCode := range newTemplates {

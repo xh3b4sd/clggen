@@ -66,7 +66,7 @@ func NewCLGGen(config Config) (spec.CLGGen, error) {
 	}
 
 	// flags
-	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.CLGExp, "clg-exp", "func (c *clg) calculate", "regular expression identifying CLG packages")
+	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.CLGExp, "clg-exp", "func (c *clg) calculate", "prefix expression identifying CLG packages")
 	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.CLGDir, "clg-dir", "clg", "path of the CLG directory")
 	newCLGGen.Cmd.PersistentFlags().StringVar(&newCLGGen.Flags.TemplateDir, "template-dir", "template", "path of the template directory")
 
