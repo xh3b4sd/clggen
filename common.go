@@ -16,6 +16,10 @@ func loadTemplates(templateDir string) (map[string]string, error) {
 	newTemplates := map[string]string{}
 
 	err := filepath.Walk(templateDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return maskAny(err)
+		}
+
 		if info.IsDir() {
 			return nil
 		}
